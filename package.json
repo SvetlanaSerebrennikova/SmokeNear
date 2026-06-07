@@ -1,0 +1,30 @@
+{
+  "name": "near-e2e-starter",
+  "version": "1.0.0",
+  "description": "E2E testing scaffold for NEAR Protocol dApps",
+  "scripts": {
+    "test": "npm run test:integration && npm run test:e2e",
+    "test:unit": "vitest run tests/unit --passWithNoTests",
+    "test:integration": "vitest run tests/integration --passWithNoTests",
+    "test:integration:oneclick": "vitest run tests/integration/oneclick-api.spec.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "PW_HEADED=1 playwright test",
+    "test:e2e:walletconnect": "playwright test tests/e2e/near-com/trade tests/e2e/near-com/transfer",
+    "test:e2e:report": "playwright show-report playwright-report",
+    "test:e2e:report:auto": "PW_HTML_REPORT_OPEN=always playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "@types/node": "^20.12.12",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@walletconnect/core": "^2.17.1",
+    "@walletconnect/types": "^2.17.1",
+    "@walletconnect/utils": "^2.17.1",
+    "@walletconnect/web3wallet": "^1.16.1",
+    "typescript": "^5.4.5",
+    "viem": "^2.48.8",
+    "vitest": "^4.1.5",
+    "ws": "^8.18.0"
+  }
+}

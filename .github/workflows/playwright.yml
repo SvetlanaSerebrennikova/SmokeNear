@@ -1,0 +1,241 @@
+# .github/workflows/playwright.yml
+#
+# Playwright HTML report (public URL for Telegram):
+#   https://<owner>.github.io/<repo>/reports/<run_id>/
+# One-time: Repo → Settings → Pages → Source: branch "gh-pages", folder "/ (root)".
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * *" # every day at 09:00 MSK (UTC+3)
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_VERSION: "24"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: https://near.com
+      CI: "true"
+      WALLETCONNECT_PROJECT_ID: ${{ secrets.WALLETCONNECT_PROJECT_ID }}
+      EVM_PRIVATE_KEY: ${{ secrets.EVM_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Block tracked secret env files
+        run: bash scripts/check-no-secrets.sh
+
+      - name: Verify GitHub Actions secrets
+        run: |
+          missing=0
+          for name in WALLETCONNECT_PROJECT_ID EVM_PRIVATE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret: ${name}"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        id: run_tests
+        run: npx playwright test
+        continue-on-error: true
+
+      - name: Upload HTML report (zip artifact)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload results JSON for Telegram
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-ci-data
+          path: test-results/results.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+  publish-report:
+    needs: test
+    if: always() && needs.test.result != 'cancelled'
+    runs-on: ubuntu-latest
+    outputs:
+      report_url: ${{ steps.report_url.outputs.url }}
+      published: ${{ steps.report_url.outputs.published }}
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: Check HTML report exists
+        id: check
+        run: |
+          if [ ! -f playwright-report/index.html ]; then
+            echo "has_report=false" >> "$GITHUB_OUTPUT"
+            echo "No playwright-report/index.html — skip Pages publish"
+            exit 0
+          fi
+          echo "has_report=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish report to gh-pages
+        id: publish
+        if: steps.check.outputs.has_report == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playwright-report
+          destination_dir: reports/${{ github.run_id }}
+          keep_files: true
+
+      - name: Build report URL
+        id: report_url
+        run: |
+          if [ "${{ steps.check.outputs.has_report }}" != "true" ]; then
+            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          owner_lc=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          repo_lc=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          url="https://${owner_lc}.github.io/${repo_lc}/reports/${{ github.run_id }}/"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+          echo "published=${{ steps.publish.outcome == 'success' }}" >> "$GITHUB_OUTPUT"
+          echo "Report URL: ${url}"
+
+  telegram:
+    needs: [test, publish-report]
+    if: always() && needs.test.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download test results JSON
+        uses: actions/download-artifact@v6
+        continue-on-error: true
+        with:
+          name: playwright-ci-data
+          path: test-results
+
+      - name: Send results to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TEST_OUTCOME: ${{ needs.test.result }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          REPORT_URL: ${{ needs.publish-report.outputs.report_url }}
+          REPORT_PUBLISHED: ${{ needs.publish-report.outputs.published }}
+        run: |
+          node -e "
+          const fs = require('fs');
+
+          function walkSuites(suites, visitSpec) {
+            for (const suite of suites || []) {
+              for (const spec of suite.specs || []) visitSpec(spec);
+              walkSuites(suite.suites, visitSpec);
+            }
+          }
+
+          let passed = 0, failed = 0, skipped = 0, duration = 0;
+          try {
+            const report = JSON.parse(fs.readFileSync('test-results/results.json', 'utf8'));
+            walkSuites(report.suites, (spec) => {
+              for (const test of spec.tests || []) {
+                const result = (test.results || [])[0];
+                if (!result) continue;
+                if (result.status === 'passed') passed++;
+                else if (result.status === 'failed' || result.status === 'timedOut') failed++;
+                else if (result.status === 'skipped') skipped++;
+                duration += result.duration || 0;
+              }
+            });
+          } catch (e) {
+            console.log('Could not parse report:', e.message);
+          }
+
+          if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
+            console.log('Telegram secrets not set — skipping notification');
+            process.exit(0);
+          }
+
+          const total = passed + failed + skipped;
+          const outcome = process.env.TEST_OUTCOME;
+          const icon = outcome === 'success' ? '✅' : '❌';
+          const runUrl =
+            'https://github.com/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID;
+          const reportUrl = (process.env.REPORT_URL || '').trim();
+          const published = process.env.REPORT_PUBLISHED === 'true';
+          const durationSec = (duration / 1000).toFixed(1);
+          const shortSha = process.env.GITHUB_SHA.substring(0, 7);
+
+          const lines = [
+            icon + ' *Playwright Tests — ' + outcome.toUpperCase() + '*',
+            '',
+            '📦 Repo: ' + process.env.GITHUB_REPOSITORY,
+            '🌿 Branch: ' + process.env.GITHUB_REF_NAME + ' (' + shortSha + ')',
+            '',
+            '📊 *Results:*',
+            '✅ Passed: ' + passed,
+            '❌ Failed: ' + failed,
+            '⏭ Skipped: ' + skipped,
+            '📝 Total: ' + total,
+            '⏱ Duration: ' + durationSec + 's',
+            '',
+            '🔗 [Open CI run](' + runUrl + ')',
+          ];
+
+          if (reportUrl) {
+            const note = published ? '' : ' _(Pages: подождите 1–2 мин, если 404 — Settings → Pages → gh-pages)_';
+            lines.push('📄 [Playwright HTML report](' + reportUrl + ')' + note);
+          } else {
+            lines.push('');
+            lines.push('📄 Report: нет playwright-report/index.html в артефакте.');
+          }
+
+          const message = lines.join('\n');
+
+          const body = JSON.stringify({
+            chat_id: process.env.TELEGRAM_CHAT_ID,
+            text: message,
+            parse_mode: 'Markdown',
+            disable_web_page_preview: false,
+          });
+
+          const https = require('https');
+          const url = 'https://api.telegram.org/bot' + process.env.TELEGRAM_BOT_TOKEN + '/sendMessage';
+          const req = https.request(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+          }, (res) => {
+            let data = '';
+            res.on('data', (chunk) => (data += chunk));
+            res.on('end', () => console.log('Telegram response:', data));
+          });
+          req.on('error', (e) => console.error('Telegram error:', e));
+          req.write(body);
+          req.end();
+          "

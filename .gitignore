@@ -1,0 +1,30 @@
+.DS_Store
+**/.DS_Store
+node_modules/
+.env
+.env.local
+.env.*.local
+.env.test
+.env.test.backup
+.env.test.local
+
+# Пути из .env.test / .env.test.example (Chrome-профиль, распакованный MetaMask)
+local/chrome-profile/
+local/metamask-extension-*/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Локально только (metamask-extension/ без версии в имени, любые секреты рядом с проектом)
+local/metamask-extension/*
+!local/metamask-extension/README.txt
+secrets/
+
+# Yarn — проект использует npm; не коммитить артефакты Yarn
+yarn.lock
+.yarn/
+.yarnrc.yml
+.yarnrc
+.pnp.cjs
+.pnp.loader.mjs
