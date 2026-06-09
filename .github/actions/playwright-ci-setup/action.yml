@@ -37,5 +37,4 @@ runs:
 
     - name: Install Playwright browsers
       shell: bash
-      timeout-minutes: 10
-      run: npx playwright install chromium --with-deps
+      run: timeout 600 npx playwright install chromium --with-deps
