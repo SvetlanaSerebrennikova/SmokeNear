@@ -1,0 +1,41 @@
+name: Playwright CI setup
+description: Secret checks, Playwright browser cache, chromium install (10m timeout).
+
+inputs:
+  verify-wallet-secrets:
+    description: Fail if WALLETCONNECT_PROJECT_ID or EVM_PRIVATE_KEY is missing.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Block tracked secret env files
+      shell: bash
+      run: bash scripts/check-no-secrets.sh
+
+    - name: Verify GitHub Actions secrets
+      if: inputs.verify-wallet-secrets == 'true'
+      shell: bash
+      run: |
+        missing=0
+        for name in WALLETCONNECT_PROJECT_ID EVM_PRIVATE_KEY; do
+          if [ -z "${!name}" ]; then
+            echo "::error::Missing repository secret: ${name}"
+            missing=1
+          fi
+        done
+        [ "$missing" -eq 0 ]
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          playwright-${{ runner.os }}-
+
+    - name: Install Playwright browsers
+      shell: bash
+      timeout-minutes: 10
+      run: npx playwright install chromium --with-deps

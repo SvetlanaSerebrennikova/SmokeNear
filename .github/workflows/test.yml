@@ -11,14 +11,10 @@ env:
   NODE_VERSION: "24"
 
 jobs:
-  e2e:
-    name: E2E Tests (Playwright)
+  integration:
+    name: Integration tests (Vitest)
     runs-on: ubuntu-latest
-    env:
-      APP_URL: https://near.com
-      CI: "true"
-      WALLETCONNECT_PROJECT_ID: ${{ secrets.WALLETCONNECT_PROJECT_ID }}
-      EVM_PRIVATE_KEY: ${{ secrets.EVM_PRIVATE_KEY }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
@@ -34,27 +30,5 @@ jobs:
       - name: Block tracked secret env files
         run: bash scripts/check-no-secrets.sh
 
-      - name: Verify GitHub Actions secrets
-        run: |
-          missing=0
-          for name in WALLETCONNECT_PROJECT_ID EVM_PRIVATE_KEY; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Missing repository secret: ${name}"
-              missing=1
-            fi
-          done
-          [ "$missing" -eq 0 ]
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run E2E tests
-        run: npm test
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+      - name: Run integration tests
+        run: npm run test:integration

@@ -1,3 +1,4 @@
+import { privateKeyToAccount } from 'viem/accounts';
 import { normalizeEvmPrivateKey } from '../utils/evm-private-key';
 import { nearIntentsAccountIdFromEnv } from '../../../support/near-intents-mt';
 
@@ -7,6 +8,8 @@ const MSG = {
   privateKey:
     'Set EVM_PRIVATE_KEY (0x + 64 hex) in .env.test (local) or GitHub Actions secret (CI)',
   privateKeyFormat: 'EVM_PRIVATE_KEY must be 64 hex characters (EVM wallet)',
+  addressMismatch: (derived: string, expected: string) =>
+    `EVM_PRIVATE_KEY derives to ${derived}, but TEST_EVM_EXPECTED_ADDRESS is ${expected} — sync .env.test with GitHub secret`,
 } as const;
 
 function assertWalletConnectEnv(): {
@@ -20,6 +23,15 @@ function assertWalletConnectEnv(): {
   if (!rawPk) throw new Error(MSG.privateKey);
   const pk = normalizeEvmPrivateKey(rawPk);
   if (!/^0x[0-9a-fA-F]{64}$/.test(pk)) throw new Error(MSG.privateKeyFormat);
+
+  const expected = process.env.TEST_EVM_EXPECTED_ADDRESS?.trim();
+  if (expected) {
+    const derived = privateKeyToAccount(pk as `0x${string}`).address;
+    if (derived.toLowerCase() !== expected.toLowerCase()) {
+      throw new Error(MSG.addressMismatch(derived, expected));
+    }
+  }
+
   return {
     projectId,
     evmPrivateKey: pk as `0x${string}`,

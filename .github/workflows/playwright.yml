@@ -6,11 +6,10 @@
 name: Playwright Tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Full wallet chain + confidential flows — scheduled / manual only (see playwright-smoke.yml for push).
   schedule:
     - cron: "0 6 * * *" # every day at 09:00 MSK (UTC+3)
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -22,6 +21,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     env:
       APP_URL: https://near.com
       CI: "true"
@@ -38,22 +38,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Block tracked secret env files
-        run: bash scripts/check-no-secrets.sh
-
-      - name: Verify GitHub Actions secrets
-        run: |
-          missing=0
-          for name in WALLETCONNECT_PROJECT_ID EVM_PRIVATE_KEY; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Missing repository secret: ${name}"
-              missing=1
-            fi
-          done
-          [ "$missing" -eq 0 ]
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+      - name: Playwright setup
+        uses: ./.github/actions/playwright-ci-setup
 
       - name: Run Playwright tests
         id: run_tests

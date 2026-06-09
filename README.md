@@ -152,7 +152,13 @@ test('user can send NEAR', async ({ page }) => {
 
 ## CI/CD Setup
 
-Wallet-chain Playwright jobs (`.github/workflows/test.yml`, `playwright.yml`) read secrets from **GitHub Actions only** — never from a committed `.env.test`.
+| Workflow | When | What runs |
+|---|---|---|
+| `playwright-smoke.yml` | every push / PR | guest validation + WC connect (`01`) ~5–15 min |
+| `playwright.yml` | daily cron + manual | full wallet chain + confidential ~30–90 min |
+| `test.yml` | push / PR | integration (Vitest) only |
+
+Wallet Playwright jobs read secrets from **GitHub Actions only** — never from a committed `.env.test`.
 
 ### Local vs CI
 

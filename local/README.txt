@@ -2,9 +2,11 @@ Local data for near.com e2e — do not commit real secrets.
 
 1. Create `.env.test` at repo root (normally gitignored).
 
-2. WalletConnect (`tests/e2e/near-com/user-journey.spec.ts` — home → login → WC, then balances / swap / confidential):
-   - WALLETCONNECT_PROJECT_ID — WalletConnect Cloud / Reown dashboard project id.
-   - EVM_PRIVATE_KEY — `0x` + 64 hex for the headless approving wallet + optional personal_sign.
+2. WalletConnect (home → login → EVM wallets → WC, then trade / confidential):
+   - WALLETCONNECT_PROJECT_ID — Reown project id (local .env.test + GitHub secret for CI).
+   - EVM_PRIVATE_KEY — must derive to TEST_EVM_EXPECTED_ADDRESS in `.env.test.defaults`
+     (current test wallet: 0xC7f5E984238CDc27c2FDC598B1eFE89870dCFc19).
+   - Run `npm run verify:wallet-env` after editing `.env.test`.
    - NEAR_WALLETCONNECT_ACCOUNT — required when proposals include `near:` namespace; also used as
      the default NEAR `account_id` for `intents.near` `mt_balance_of` / `mt_batch_balance_of` in
      trade balance ranking (override with TEST_INTENTS_ACCOUNT_ID).
