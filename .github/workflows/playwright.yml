@@ -2,7 +2,7 @@
 #
 # Playwright HTML report (public URL for Telegram):
 #   https://<owner>.github.io/<repo>/reports/<run_id>/
-# One-time: Repo → Settings → Pages → Source: branch "gh-pages", folder "/ (root)".
+# Pages: branch gh-pages, folder / (root). URL uses exact repo name case (SmokeNear, not smokenear).
 name: Playwright Tests
 
 on:
@@ -111,9 +111,8 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          owner_lc=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          repo_lc=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
-          url="https://${owner_lc}.github.io/${repo_lc}/reports/${{ github.run_id }}/"
+          # github.io path is case-sensitive for repo name (SmokeNear ≠ smokenear).
+          url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/${{ github.run_id }}/"
           echo "url=${url}" >> "$GITHUB_OUTPUT"
           echo "published=${{ steps.publish.outcome == 'success' }}" >> "$GITHUB_OUTPUT"
           echo "Report URL: ${url}"
