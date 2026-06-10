@@ -14,6 +14,7 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_VERSION: "24"
+  PLAYWRIGHT_VERSION: "1.48.2"
 
 permissions:
   contents: write
@@ -22,6 +23,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    container:
+      image: mcr.microsoft.com/playwright:v1.48.2-jammy
     env:
       APP_URL: https://near.com
       CI: "true"
@@ -29,6 +32,8 @@ jobs:
       EVM_PRIVATE_KEY: ${{ secrets.EVM_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: false
 
       - uses: actions/setup-node@v5
         with:
@@ -40,11 +45,12 @@ jobs:
 
       - name: Playwright setup
         uses: ./.github/actions/playwright-ci-setup
+        with:
+          install-browsers: 'false'
 
       - name: Run Playwright tests
         id: run_tests
         run: npx playwright test
-        continue-on-error: true
 
       - name: Upload HTML report (zip artifact)
         if: always()

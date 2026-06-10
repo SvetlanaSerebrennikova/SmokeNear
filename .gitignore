@@ -1,6 +1,7 @@
 .DS_Store
 **/.DS_Store
 node_modules/
+near-api-js/
 .env
 .env.local
 .env.*.local

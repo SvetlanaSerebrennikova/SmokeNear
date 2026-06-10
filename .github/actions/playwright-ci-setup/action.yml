@@ -1,9 +1,13 @@
 name: Playwright CI setup
-description: Secret checks, Playwright browser cache, chromium install (10m timeout).
+description: Secret checks and optional Playwright browser install.
 
 inputs:
   verify-wallet-secrets:
     description: Fail if WALLETCONNECT_PROJECT_ID or EVM_PRIVATE_KEY is missing.
+    required: false
+    default: 'true'
+  install-browsers:
+    description: Run playwright install (skip when using mcr.microsoft.com/playwright container).
     required: false
     default: 'true'
 
@@ -28,6 +32,7 @@ runs:
         [ "$missing" -eq 0 ]
 
     - name: Cache Playwright browsers
+      if: inputs.install-browsers == 'true'
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
@@ -36,5 +41,9 @@ runs:
           playwright-${{ runner.os }}-
 
     - name: Install Playwright browsers
+      if: inputs.install-browsers == 'true'
       shell: bash
-      run: timeout 600 npx playwright install chromium --with-deps
+      run: |
+        # chromium only; --with-deps is slow/hangs on some GHA runners after zip download
+        npx playwright install-deps chromium
+        npx playwright install chromium
