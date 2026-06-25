@@ -56,7 +56,7 @@ test('Confidential: withdraw to main drops confidential slice in UI', async ({ w
 
   await test.step('4 Проверить текст: Move assets … Confidential … Main …', async () => {
     await expect(
-      wcPage.getByText(unshieldIntroPattern).filter({ visible: true })
+      wcPage.getByText(unshieldIntroPattern).filter({ visible: true }).first()
     ).toBeVisible({ timeout: 30_000 });
     await expectNearComTransferModeUrl(wcPage, 'unshield');
   });
