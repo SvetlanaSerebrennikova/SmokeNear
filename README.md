@@ -154,7 +154,7 @@ test('user can send NEAR', async ({ page }) => {
 
 | Workflow | When | What runs |
 |---|---|---|
-| `ci.yml` (**SmokeNear**) | push **main**, daily **17:00 MSK**, manual | Vitest integration + guest E2E + WC connect (`01`) ~10–20 min |
+| `ci.yml` (**SmokeNear**) | **daily 17:00 MSK**, push `main`, manual | Vitest integration + guest E2E + WC connect (`01`) ~10–20 min |
 
 Full wallet chain (swap, confidential) — run locally: `npm run test:e2e:walletconnect`.
 

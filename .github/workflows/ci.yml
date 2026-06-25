@@ -1,14 +1,17 @@
-# Single daily CI: integration + stable E2E smoke (guest + WC connect).
+# SmokeNear CI: integration + stable E2E smoke (guest + WC connect).
+# Triggers: daily 17:00 MSK, push to main, manual.
 # Report → gh-pages; summary → Telegram (when secrets set).
 #
 # HTML report: https://<owner>.github.io/<repo>/reports/<run_id>/
 name: SmokeNear
 
 on:
+  schedule:
+    # Every day at 17:00 Moscow time (GitHub Actions cron timezone).
+    - cron: "0 17 * * *"
+      timezone: Europe/Moscow
   push:
     branches: [main]
-  schedule:
-    - cron: "0 14 * * *" # every day at 17:00 MSK (UTC+3)
   workflow_dispatch:
 
 env:
