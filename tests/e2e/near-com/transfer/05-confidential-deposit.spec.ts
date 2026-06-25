@@ -43,7 +43,9 @@ test('Confidential: deposit from public balance updates confidential slice in UI
   });
 
   await test.step('4 Assert copy: Main → Confidential', async () => {
-    await expect(wcPage.getByText(shieldIntroPattern).first()).toBeVisible({ timeout: 30_000 });
+    await expect(
+      wcPage.getByText(shieldIntroPattern).filter({ visible: true })
+    ).toBeVisible({ timeout: 30_000 });
     await expectNearComTransferModeUrl(wcPage, 'shield');
   });
 
