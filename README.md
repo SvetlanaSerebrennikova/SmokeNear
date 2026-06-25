@@ -154,9 +154,10 @@ test('user can send NEAR', async ({ page }) => {
 
 | Workflow | When | What runs |
 |---|---|---|
-| `smokenear.yml` (**SmokeNear**) | **daily 17:00 MSK**, push `main`, manual | Vitest integration + guest E2E + WC connect (`01`) ~10–20 min |
+| `smokenear.yml` (**SmokeNear**) | **daily 17:00 MSK**, push `main` → **smoke**; manual → smoke or **full** | Vitest (7) + E2E smoke (9) or full E2E (15) |
 
-Full wallet chain (swap, confidential) — run locally: `npm run test:e2e:walletconnect`.
+- **smoke** (default): integration + `validation/` + `trade/01` (~10–20 min)
+- **full** (manual only): integration + all Playwright specs `trade/*` + `transfer/*` (~30–90 min; needs funded test wallet)
 
 Wallet Playwright jobs read secrets from **GitHub Actions only** — never from a committed `.env.test`.
 

@@ -1,5 +1,5 @@
-# SmokeNear CI: integration + stable E2E smoke (guest + WC connect).
-# Triggers: daily 17:00 MSK, push to main, manual.
+# SmokeNear CI: integration + E2E (smoke by default; full suite via manual dispatch).
+# Triggers: daily 17:00 MSK + push → smoke; manual → smoke or full.
 # Report → gh-pages; summary → Telegram (when secrets set).
 #
 # HTML report: https://<owner>.github.io/<repo>/reports/<run_id>/
@@ -13,6 +13,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      suite:
+        description: smoke (~15 min) or full wallet chain (~30–90 min)
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - full
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -24,9 +33,9 @@ permissions:
 
 jobs:
   test:
-    name: Integration + E2E smoke
+    name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'full' && 'Integration + full E2E' || 'Integration + E2E smoke' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'full' && 120 || 45 }}
     container:
       image: mcr.microsoft.com/playwright:v1.48.2-jammy
     env:
@@ -59,10 +68,15 @@ jobs:
           install-browsers: "false"
 
       - name: E2E smoke (guest validation + WalletConnect connect)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.suite != 'full'
         run: |
           npx playwright test \
             tests/e2e/near-com/validation \
             tests/e2e/near-com/trade/01-connected-evm-address.spec.ts
+
+      - name: E2E full suite (wallet chain + confidential)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.suite == 'full'
+        run: npx playwright test
 
       - name: Upload HTML report
         if: always()
@@ -145,6 +159,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TEST_OUTCOME: ${{ needs.test.result }}
+          TEST_SUITE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.suite || 'smoke' }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
@@ -195,7 +210,7 @@ jobs:
           const shortSha = process.env.GITHUB_SHA.substring(0, 7);
 
           const lines = [
-            icon + ' *SmokeNear — ' + outcome.toUpperCase() + '*',
+            icon + ' *SmokeNear (' + (process.env.TEST_SUITE || 'smoke') + ') — ' + outcome.toUpperCase() + '*',
             '',
             '📦 Repo: ' + process.env.GITHUB_REPOSITORY,
             '🌿 Branch: ' + process.env.GITHUB_REF_NAME + ' (' + shortSha + ')',
