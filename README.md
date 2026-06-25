@@ -28,7 +28,7 @@ near-e2e-starter/
 │   ├── setup-test-accounts.js  # One-time testnet account setup
 │   └── load-test.js            # k6 RPC load test
 ├── .github/workflows/
-│   └── smokenear.yml           # SmokeNear CI (push main + daily 17:00 MSK)
+│   └── smokenear.yml           # SmokeNear CI — full suite, daily 17:00 MSK
 ├── .env.test.example           # Environment variable template
 ├── playwright.config.ts
 ├── vitest.config.ts
@@ -154,10 +154,9 @@ test('user can send NEAR', async ({ page }) => {
 
 | Workflow | When | What runs |
 |---|---|---|
-| `smokenear.yml` (**SmokeNear**) | **daily 17:00 MSK**, push `main` → **smoke**; manual → smoke or **full** | Vitest (7) + E2E smoke (9) or full E2E (15) |
+| `smokenear.yml` (**SmokeNear**) | **daily 17:00 MSK**, push `main`, manual | Vitest (7) + full E2E (15) ~30–90 min |
 
-- **smoke** (default): integration + `validation/` + `trade/01` (~10–20 min)
-- **full** (manual only): integration + all Playwright specs `trade/*` + `transfer/*` (~30–90 min; needs funded test wallet)
+Requires funded test wallet (`EVM_PRIVATE_KEY` / `0xC7f5E984…`) and Intents account for swap/confidential specs.
 
 Wallet Playwright jobs read secrets from **GitHub Actions only** — never from a committed `.env.test`.
 
