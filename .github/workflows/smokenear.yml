@@ -85,7 +85,7 @@ jobs:
   publish-report:
     name: Publish HTML report
     needs: test
-    if: always() && needs.test.result != "cancelled"
+    if: always() && needs.test.result != 'cancelled'
     runs-on: ubuntu-latest
     outputs:
       report_url: ${{ steps.report_url.outputs.url }}
@@ -107,7 +107,7 @@ jobs:
 
       - name: Publish report to gh-pages
         id: publish
-        if: steps.check.outputs.has_report == "true"
+        if: steps.check.outputs.has_report == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -130,7 +130,7 @@ jobs:
   telegram:
     name: Telegram summary
     needs: [test, publish-report]
-    if: always() && needs.test.result != "cancelled"
+    if: always() && needs.test.result != 'cancelled'
     runs-on: ubuntu-latest
     steps:
       - name: Download test results JSON

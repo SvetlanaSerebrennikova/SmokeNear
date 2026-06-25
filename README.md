@@ -28,7 +28,7 @@ near-e2e-starter/
 │   ├── setup-test-accounts.js  # One-time testnet account setup
 │   └── load-test.js            # k6 RPC load test
 ├── .github/workflows/
-│   └── ci.yml                  # Smoke CI (push main + daily 17:00 MSK)
+│   └── smokenear.yml           # SmokeNear CI (push main + daily 17:00 MSK)
 ├── .env.test.example           # Environment variable template
 ├── playwright.config.ts
 ├── vitest.config.ts
@@ -154,7 +154,7 @@ test('user can send NEAR', async ({ page }) => {
 
 | Workflow | When | What runs |
 |---|---|---|
-| `ci.yml` (**SmokeNear**) | **daily 17:00 MSK**, push `main`, manual | Vitest integration + guest E2E + WC connect (`01`) ~10–20 min |
+| `smokenear.yml` (**SmokeNear**) | **daily 17:00 MSK**, push `main`, manual | Vitest integration + guest E2E + WC connect (`01`) ~10–20 min |
 
 Full wallet chain (swap, confidential) — run locally: `npm run test:e2e:walletconnect`.
 
@@ -177,7 +177,7 @@ Go to **Settings → Secrets and variables → Actions → New repository secret
 |---|---|---|
 | `WALLETCONNECT_PROJECT_ID` | Yes (wallet E2E) | [Reown / WalletConnect Cloud](https://cloud.reown.com) project id |
 | `EVM_PRIVATE_KEY` | Yes (wallet E2E) | `0x` + 64 hex — dedicated test wallet with minimal funds |
-| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for daily `ci.yml` notifications |
+| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for `smokenear.yml` notifications |
 | `TELEGRAM_CHAT_ID` | No | Chat id for Telegram notifications |
 
 CI fails fast if `WALLETCONNECT_PROJECT_ID` or `EVM_PRIVATE_KEY` is missing.
