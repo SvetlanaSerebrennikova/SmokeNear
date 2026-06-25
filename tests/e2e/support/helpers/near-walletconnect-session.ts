@@ -1,6 +1,5 @@
 import { expect, type Locator } from '@playwright/test';
 import type { BrowserContext, Page } from '@playwright/test';
-import { nearComEthAccountIndicator } from '../locators/near-com.account.locators';
 import { assertNearComWalletSessionReady } from './near-com-my-address-modal';
 import {
   nearComBrowserWalletRailOpener,
@@ -227,7 +226,7 @@ export async function reconnectNearComWalletConnect(
 }
 
 /**
- * Home chrome shows EVM address, then open /swap authenticated.
+ * Signed-in home session, then open /swap authenticated.
  * On /login redirect, re-pair WC once and retry.
  */
 export async function gotoAuthenticatedSwap(
@@ -242,9 +241,7 @@ export async function gotoAuthenticatedSwap(
 
     if (!/\/login/i.test(page.url())) {
       await expect(page).toHaveURL(/\/swap(?:\/|$|\?)/i);
-      await expect(nearComEthAccountIndicator(page, bridge.evmAddress)).toBeVisible({
-        timeout: 60_000,
-      });
+      await assertNearComWalletSessionReady(page);
       return;
     }
 

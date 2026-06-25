@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { nearComEthAccountIndicator, uiTextShowsEthConnection } from '../locators/near-com.account.locators';
+import { assertNearComWalletSessionReady } from './near-com-my-address-modal';
 
 export type NearComConfidentialTransferMode = 'shield' | 'unshield';
 
@@ -24,16 +24,13 @@ export async function expectNearComTransferModeUrl(
 }
 
 /**
- * Same baseline as the swap wallet chain (`trade/01`): app origin is open and the WC EVM session
- * is visible in chrome — before any transfer-specific navigation (e.g. Move → shield).
+ * Same baseline as WC connect / `trade/01`: app origin is open and Account menu is available
+ * (near.com no longer reliably shows the EVM address in header).
  */
 export async function transferFlowPreconditionsNearComSignedIn(
   page: Page,
-  evmAddress: `0x${string}`
+  _evmAddress: `0x${string}`
 ): Promise<void> {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page).not.toHaveURL(/\/login/i);
-  const indicator = nearComEthAccountIndicator(page, evmAddress);
-  await expect(indicator).toBeVisible({ timeout: 90_000 });
-  expect(uiTextShowsEthConnection(await indicator.textContent(), evmAddress)).toBe(true);
+  await assertNearComWalletSessionReady(page);
 }
