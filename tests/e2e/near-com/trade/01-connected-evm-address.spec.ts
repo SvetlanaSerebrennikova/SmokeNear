@@ -1,13 +1,11 @@
 /**
- * Wallet chain — step 1: after WC pairing, the header shows the same EVM address the bridge signed with.
+ * Wallet chain — step 1: after WC pairing, Account → My address shows the connected EVM address.
  */
-import { expect, test } from '../fixtures/wallet-worker-chain';
-import { nearComEthAccountIndicator, uiTextShowsEthConnection } from '../../support/locators/near-com.account.locators';
+import { test } from '../fixtures/wallet-worker-chain';
+import { assertConnectedEvmAddressViaMyAddressModal } from '../../support/helpers/near-com-my-address-modal';
 
-test.describe.configure({ timeout: 120_000 });
+test.describe.configure({ timeout: 180_000 });
 
-test('WalletConnect: chrome shows connected EVM address', async ({ wcPage, wcBridge }) => {
-  const indicator = nearComEthAccountIndicator(wcPage, wcBridge.evmAddress);
-  await expect(indicator).toBeVisible({ timeout: 30_000 });
-  expect(uiTextShowsEthConnection(await indicator.textContent(), wcBridge.evmAddress)).toBe(true);
+test('WalletConnect: My Address modal shows connected EVM address', async ({ wcPage, wcBridge }) => {
+  await assertConnectedEvmAddressViaMyAddressModal(wcPage, wcBridge.evmAddress);
 });

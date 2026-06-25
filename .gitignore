@@ -29,3 +29,4 @@ yarn.lock
 .yarnrc
 .pnp.cjs
 .pnp.loader.mjs
+.cursor/
