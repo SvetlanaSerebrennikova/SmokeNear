@@ -20,6 +20,7 @@ import {
   nearComMoveAgainCta,
 } from '../../support/locators/near-com.locators';
 import {
+  expectVisibleConfidentialIntroCopy,
   formatTransferAmount,
   spendableUiAmount,
   submitConfidentialTransferAmount,
@@ -55,9 +56,7 @@ test('Confidential: withdraw to main drops confidential slice in UI', async ({ w
   });
 
   await test.step('4 Проверить текст: Move assets … Confidential … Main …', async () => {
-    await expect(
-      wcPage.getByText(unshieldIntroPattern).filter({ visible: true }).first()
-    ).toBeVisible({ timeout: 30_000 });
+    await expectVisibleConfidentialIntroCopy(wcPage, unshieldIntroPattern);
     await expectNearComTransferModeUrl(wcPage, 'unshield');
   });
 

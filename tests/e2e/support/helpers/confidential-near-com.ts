@@ -18,6 +18,20 @@ export function parseEnvPortfolioToken(raw: string | undefined): string | null {
   return t || null;
 }
 
+/** near.com may keep inactive-tab / responsive duplicates hidden from innerText. */
+export async function expectVisibleConfidentialIntroCopy(page: Page, pattern: RegExp): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const text = (await page.locator('main').innerText({ timeout: 5_000 }).catch(() => ''))
+          .replace(/\s+/g, ' ');
+        return pattern.test(text);
+      },
+      { timeout: 30_000, intervals: [500, 1000] }
+    )
+    .toBe(true);
+}
+
 /** Prefer `TEST_CONFIDENTIAL_TOKEN`, then symbols ordered by scraped balance (highest first). */
 export function orderedSymbolsFromScrapedBalances(normRaw: string, prefer: string | null): string[] {
   const m = parseSwapTickerBalances(normalizeSwapUiBlob(normRaw));

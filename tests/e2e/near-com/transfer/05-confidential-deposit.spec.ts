@@ -12,6 +12,7 @@ import {
 } from '../../support/helpers/near-com-transfer-preconditions';
 import { nearComConfidentialShieldMoveLink, nearComMoveAgainCta } from '../../support/locators/near-com.locators';
 import {
+  expectVisibleConfidentialIntroCopy,
   formatTransferAmount,
   spendableUiAmount,
   submitConfidentialTransferAmount,
@@ -43,9 +44,7 @@ test('Confidential: deposit from public balance updates confidential slice in UI
   });
 
   await test.step('4 Assert copy: Main → Confidential', async () => {
-    await expect(
-      wcPage.getByText(shieldIntroPattern).filter({ visible: true }).first()
-    ).toBeVisible({ timeout: 30_000 });
+    await expectVisibleConfidentialIntroCopy(wcPage, shieldIntroPattern);
     await expectNearComTransferModeUrl(wcPage, 'shield');
   });
 
