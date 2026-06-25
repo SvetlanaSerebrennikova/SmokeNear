@@ -28,7 +28,7 @@ near-e2e-starter/
 │   ├── setup-test-accounts.js  # One-time testnet account setup
 │   └── load-test.js            # k6 RPC load test
 ├── .github/workflows/
-│   └── ci.yml                  # Daily smoke CI (17:00 MSK)
+│   └── ci.yml                  # Smoke CI (push main + daily 17:00 MSK)
 ├── .env.test.example           # Environment variable template
 ├── playwright.config.ts
 ├── vitest.config.ts
@@ -154,7 +154,7 @@ test('user can send NEAR', async ({ page }) => {
 
 | Workflow | When | What runs |
 |---|---|---|
-| `ci.yml` (**SmokeNear**) | daily **17:00 MSK** + manual | Vitest integration + guest E2E + WC connect (`01`) ~10–20 min |
+| `ci.yml` (**SmokeNear**) | push **main**, daily **17:00 MSK**, manual | Vitest integration + guest E2E + WC connect (`01`) ~10–20 min |
 
 Full wallet chain (swap, confidential) — run locally: `npm run test:e2e:walletconnect`.
 

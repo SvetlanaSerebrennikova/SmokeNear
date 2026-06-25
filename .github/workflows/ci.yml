@@ -5,6 +5,8 @@
 name: SmokeNear
 
 on:
+  push:
+    branches: [main]
   schedule:
     - cron: "0 14 * * *" # every day at 17:00 MSK (UTC+3)
   workflow_dispatch:
