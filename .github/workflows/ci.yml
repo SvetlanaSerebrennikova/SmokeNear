@@ -1,14 +1,12 @@
-# .github/workflows/playwright.yml
+# Single daily CI: integration + stable E2E smoke (guest + WC connect).
+# Report → gh-pages; summary → Telegram (when secrets set).
 #
-# Playwright HTML report (public URL for Telegram):
-#   https://<owner>.github.io/<repo>/reports/<run_id>/
-# Pages: branch gh-pages, folder / (root). URL uses exact repo name case (SmokeNear, not smokenear).
-name: Playwright Tests
+# HTML report: https://<owner>.github.io/<repo>/reports/<run_id>/
+name: SmokeNear
 
 on:
-  # Full wallet chain + confidential flows — scheduled / manual only (see playwright-smoke.yml for push).
   schedule:
-    - cron: "0 6 * * *" # every day at 09:00 MSK (UTC+3)
+    - cron: "0 14 * * *" # every day at 17:00 MSK (UTC+3)
   workflow_dispatch:
 
 env:
@@ -21,8 +19,9 @@ permissions:
 
 jobs:
   test:
+    name: Integration + E2E smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 45
     container:
       image: mcr.microsoft.com/playwright:v1.48.2-jammy
     env:
@@ -43,16 +42,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Block tracked secret env files
+        run: bash scripts/check-no-secrets.sh
+
+      - name: Integration tests (Vitest)
+        run: npm run test:integration
+
       - name: Playwright setup
         uses: ./.github/actions/playwright-ci-setup
         with:
-          install-browsers: 'false'
+          install-browsers: "false"
 
-      - name: Run Playwright tests
-        id: run_tests
-        run: npx playwright test
+      - name: E2E smoke (guest validation + WalletConnect connect)
+        run: |
+          npx playwright test \
+            tests/e2e/near-com/validation \
+            tests/e2e/near-com/trade/01-connected-evm-address.spec.ts
 
-      - name: Upload HTML report (zip artifact)
+      - name: Upload HTML report
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -71,8 +78,9 @@ jobs:
           if-no-files-found: ignore
 
   publish-report:
+    name: Publish HTML report
     needs: test
-    if: always() && needs.test.result != 'cancelled'
+    if: always() && needs.test.result != "cancelled"
     runs-on: ubuntu-latest
     outputs:
       report_url: ${{ steps.report_url.outputs.url }}
@@ -88,14 +96,13 @@ jobs:
         run: |
           if [ ! -f playwright-report/index.html ]; then
             echo "has_report=false" >> "$GITHUB_OUTPUT"
-            echo "No playwright-report/index.html — skip Pages publish"
             exit 0
           fi
           echo "has_report=true" >> "$GITHUB_OUTPUT"
 
       - name: Publish report to gh-pages
         id: publish
-        if: steps.check.outputs.has_report == 'true'
+        if: steps.check.outputs.has_report == "true"
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -111,15 +118,14 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # github.io path is case-sensitive for repo name (SmokeNear ≠ smokenear).
           url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/${{ github.run_id }}/"
           echo "url=${url}" >> "$GITHUB_OUTPUT"
           echo "published=${{ steps.publish.outcome == 'success' }}" >> "$GITHUB_OUTPUT"
-          echo "Report URL: ${url}"
 
   telegram:
+    name: Telegram summary
     needs: [test, publish-report]
-    if: always() && needs.test.result != 'cancelled'
+    if: always() && needs.test.result != "cancelled"
     runs-on: ubuntu-latest
     steps:
       - name: Download test results JSON
@@ -184,7 +190,7 @@ jobs:
           const shortSha = process.env.GITHUB_SHA.substring(0, 7);
 
           const lines = [
-            icon + ' *Playwright Tests — ' + outcome.toUpperCase() + '*',
+            icon + ' *SmokeNear — ' + outcome.toUpperCase() + '*',
             '',
             '📦 Repo: ' + process.env.GITHUB_REPOSITORY,
             '🌿 Branch: ' + process.env.GITHUB_REF_NAME + ' (' + shortSha + ')',
@@ -200,18 +206,13 @@ jobs:
           ];
 
           if (reportUrl) {
-            const note = published ? '' : ' _(Pages: подождите 1–2 мин, если 404 — Settings → Pages → gh-pages)_';
+            const note = published ? '' : ' _(Pages: подождите 1–2 мин, если 404)_';
             lines.push('📄 [Playwright HTML report](' + reportUrl + ')' + note);
-          } else {
-            lines.push('');
-            lines.push('📄 Report: нет playwright-report/index.html в артефакте.');
           }
-
-          const message = lines.join('\n');
 
           const body = JSON.stringify({
             chat_id: process.env.TELEGRAM_CHAT_ID,
-            text: message,
+            text: lines.join('\n'),
             parse_mode: 'Markdown',
             disable_web_page_preview: false,
           });

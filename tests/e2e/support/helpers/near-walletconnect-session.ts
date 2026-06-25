@@ -13,6 +13,7 @@ import {
 import { createWalletConnectTestBridge } from './walletconnect-wallet-bridge';
 import { readWalletConnectUriFromPage } from './walletconnect-uri';
 import { dismissVerifyWalletModalIfPresent } from './near-verify-wallet-modal';
+import { transferFlowPreconditionsNearComSignedIn } from './near-com-transfer-preconditions';
 
 export type NearWalletConnectSessionOptions = {
   projectId: string;
@@ -103,4 +104,64 @@ export async function connectNearComWithWalletConnect(
   expect(uiTextShowsEthConnection(await indicator.textContent(), bridge.evmAddress)).toBe(true);
 
   return bridge;
+}
+
+export type WalletConnectPairingBridge = {
+  readonly evmAddress: `0x${string}`;
+  pair(uri: string): Promise<void>;
+};
+
+/** Re-pair an existing headless WC bridge when near.com drops the EVM session. */
+export async function reconnectNearComWalletConnect(
+  page: Page,
+  bridge: WalletConnectPairingBridge
+): Promise<void> {
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await revealWcProviderListNearLogin(page);
+
+  const wcEntry = walletConnectLoginOption(page);
+  await expect(wcEntry).toBeVisible({ timeout: 90_000 });
+  await wcEntry.click();
+  await maybeClickWalletConnectInModal(page);
+
+  const uri = await readWalletConnectUriFromPage(page, 120_000);
+  await bridge.pair(uri);
+  await page.waitForTimeout(3000);
+  await dismissVerifyWalletModalIfPresent(page);
+
+  const indicator = nearComEthAccountIndicator(page, bridge.evmAddress);
+  await expect(indicator).toBeVisible({ timeout: 120_000 });
+  expect(uiTextShowsEthConnection(await indicator.textContent(), bridge.evmAddress)).toBe(true);
+}
+
+/**
+ * Home chrome shows EVM address, then open /swap authenticated.
+ * On /login redirect, re-pair WC once and retry.
+ */
+export async function gotoAuthenticatedSwap(
+  page: Page,
+  bridge: WalletConnectPairingBridge
+): Promise<void> {
+  await transferFlowPreconditionsNearComSignedIn(page, bridge.evmAddress);
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.goto('/swap', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2000);
+
+    if (!/\/login/i.test(page.url())) {
+      await expect(page).toHaveURL(/\/swap(?:\/|$|\?)/i);
+      await expect(nearComEthAccountIndicator(page, bridge.evmAddress)).toBeVisible({
+        timeout: 60_000,
+      });
+      return;
+    }
+
+    if (attempt === 0) {
+      await reconnectNearComWalletConnect(page, bridge);
+      await transferFlowPreconditionsNearComSignedIn(page, bridge.evmAddress);
+    }
+  }
+
+  await expect(page).not.toHaveURL(/\/login/i);
+  await expect(page).toHaveURL(/\/swap(?:\/|$|\?)/i);
 }

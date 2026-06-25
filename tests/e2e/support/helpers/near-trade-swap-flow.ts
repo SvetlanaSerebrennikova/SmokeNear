@@ -25,6 +25,10 @@ import {
 import type { OneClickQuoteCapture } from './oneclick-quote-capture';
 import { closeExtraContextPages } from './browser-context-cleanup';
 import { firstTokenRowAfterYourTokensLabel, tokenPickerRowScrapeText } from './near-com-token-modal';
+import {
+  gotoAuthenticatedSwap,
+  type WalletConnectPairingBridge,
+} from './near-walletconnect-session';
 
 async function rankedPayCandidatesMergedWithIntents(page: Page) {
   const id = nearIntentsAccountIdFromEnv();
@@ -278,12 +282,11 @@ async function ensurePaySideWithRetries(page: Page): Promise<{ ticker: string; p
 }
 
 /** Load /swap authenticated and ensure we can rank at least one pay token from balances. */
-export async function assertSwapFundingPrerequisites(page: Page): Promise<void> {
-  await page.goto('/swap', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(2000);
-
-  await expect(page).toHaveURL(/\/swap(?:\/|$|\?)/i);
-  await expect(page).not.toHaveURL(/\/login/i);
+export async function assertSwapFundingPrerequisites(
+  page: Page,
+  bridge: WalletConnectPairingBridge
+): Promise<void> {
+  await gotoAuthenticatedSwap(page, bridge);
 
   await expect(page.getByRole('heading', { name: /\b(trade|swap)\b/i }).first()).toBeVisible({
     timeout: 60_000,
@@ -396,8 +399,7 @@ async function resolveSwapDepositAddress(
 export async function completeSwapTradeAndVerifyExplorer(
   page: Page,
   context: BrowserContext,
-  bridge: {
-    readonly evmAddress: `0x${string}`;
+  bridge: WalletConnectPairingBridge & {
     getSessionCaptures(): readonly { method: string; params: unknown }[];
   },
   opts?: {
@@ -408,11 +410,9 @@ export async function completeSwapTradeAndVerifyExplorer(
 ): Promise<void> {
   const pollStatus =
     opts?.pollOneClickStatus === true || process.env.TEST_ONECLICK_STATUS_POLL?.trim() === '1';
-  await page.goto('/swap', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(3500);
+  await gotoAuthenticatedSwap(page, bridge);
+  await page.waitForTimeout(1500);
 
-  await expect(page).toHaveURL(/\/swap(?:\/|$|\?)/i);
-  await expect(page).not.toHaveURL(/\/login/i);
   await expect(page.getByRole('heading', { name: /\b(trade|swap)\b/i }).first()).toBeVisible({
     timeout: 60_000,
   });

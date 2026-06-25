@@ -5,7 +5,6 @@
  */
 import { expect, test } from '../fixtures/wallet-worker-chain';
 import { attachOneClickNetworkRecorder } from '../../support/helpers/oneclick-network-recorder';
-import { transferFlowPreconditionsNearComSignedIn } from '../../support/helpers/near-com-transfer-preconditions';
 import {
   assertSwapFundingPrerequisites,
   ensurePaySideWithExecutableQuote,
@@ -38,8 +37,7 @@ test('Swap UI triggers 1Click GET /v0/tokens and POST /v0/quote (when proxied in
   const recorder = attachOneClickNetworkRecorder(wcPage);
 
   try {
-    await transferFlowPreconditionsNearComSignedIn(wcPage, wcBridge.evmAddress);
-    await assertSwapFundingPrerequisites(wcPage);
+    await assertSwapFundingPrerequisites(wcPage, wcBridge);
 
     const pay = await ensurePaySideWithExecutableQuote(wcPage);
     expect(pay, 'need funded pay side + executable quote').toBeTruthy();
