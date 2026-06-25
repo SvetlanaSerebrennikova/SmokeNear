@@ -9,7 +9,7 @@ on:
   schedule:
     # Every day at 17:00 Moscow time (GitHub Actions cron timezone).
     - cron: "0 17 * * *"
-      timezone: Europe/Moscow
+      timezone: "Europe/Moscow"
   push:
     branches: [main]
   workflow_dispatch:
